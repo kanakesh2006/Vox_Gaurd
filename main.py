@@ -13,6 +13,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
+import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
