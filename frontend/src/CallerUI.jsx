@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-const API_BASE = window.location.hostname === 'localhost' ? 'localhost:8001' : window.location.host;
+const API_BASE = window.location.host;
 
 export default function CallerUI() {
     const [isCalling, setIsCalling] = useState(false);

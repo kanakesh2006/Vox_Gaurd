@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const API_BASE = window.location.hostname === 'localhost' ? 'localhost:8001' : window.location.host;
+const API_BASE = window.location.host;
 
 export default function Dashboard() {
     const [alerts, setAlerts] = useState([]);
