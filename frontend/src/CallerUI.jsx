@@ -36,15 +36,11 @@ export default function CallerUI() {
                 processorRef.current.onaudioprocess = (e) => {
                     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                         const inputData = e.inputBuffer.getChannelData(0);
-                        
-                        const rms = Math.sqrt(inputData.reduce((acc, val) => acc + val * val, 0) / inputData.length);
-                        if (rms > 0.01) {
-                            const pcm16 = new Int16Array(inputData.length);
-                            for (let i = 0; i < inputData.length; i++) {
-                                pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
-                            }
-                            wsRef.current.send(pcm16.buffer);
+                        const pcm16 = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
                         }
+                        wsRef.current.send(pcm16.buffer);
                     }
                 };
             } catch (err) {
