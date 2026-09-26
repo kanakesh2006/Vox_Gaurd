@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Desk Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><span style="color: var(--danger)">🔴</span> Live Fraud Operations</h1>
+            <div style="font-size: 0.875rem; color: #94a3b8">Covert Security Protocol Monitoring</div>
+        </header>
+
+        <div id="alerts-container" class="dashboard-grid">
+            <!-- Alerts will appear here -->
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('alerts-container');
+        const evtSource = new EventSource('/alerts/stream');
+
+        evtSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            // Check if alert already exists
+            let card = document.getElementById(`alert-${data.session_id}`);
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `alert-${data.session_id}`;
+                card.className = 'alert-card';
+                container.prepend(card);
+            }
+
+            const transcriptHtml = data.transcript.map(t => `<div style="background: rgba(255,255,255,0.05); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.875rem;">"${t}"</div>`).join('');
+
+            card.innerHTML = `
+                <div class="alert-header">
+                    <span>⚠️ DURESS SIGNAL DETECTED</span>
+                    <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" onclick="intervene('${data.session_id}')">Intervene</button>
+                </div>
+                <div class="stat">
+                    <span>Session ID</span>
+                    <span class="stat-value">${data.session_id}</span>
+                </div>
+                <div class="stat">
+                    <span>Target Amount</span>
+                    <span class="stat-value" style="color: #fbbf24">₹${data.amount || 'Unknown'}</span>
+                </div>
+                <div class="stat">
+                    <span>Risk Score</span>
+                    <span class="stat-value" style="color: var(--danger)">${data.risk_score.toFixed(2)}</span>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase;">Live Transcript</div>
+                    ${transcriptHtml}
+                </div>
+            `;
+        };
+
+        function intervene(sessionId) {
+            alert(`Connecting agent to session ${sessionId}...`);
+            document.getElementById(`alert-${sessionId}`).remove();
+        }
+    </script>
+</body>
+</html>

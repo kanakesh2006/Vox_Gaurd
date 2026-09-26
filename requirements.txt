@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+websockets
+python-multipart
+aiohttp
+librosa
+praat-parselmouth
+numpy
+soundfile
+jinja2
