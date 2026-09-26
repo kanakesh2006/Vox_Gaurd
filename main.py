@@ -11,19 +11,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import StreamingResponse
-import logging
+from fastapi.middleware.cors import CORSMiddleware
+from config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Voice-Auth & Anti-Spoofing")
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
-SARVAM_API_KEY = os.environ.get("SARVAM_API_KEY", "your_api_key_here")
-AMOUNT_THRESHOLD = 10000
-DURESS_THRESHOLD = 1.5
-STEPUP_THRESHOLD = 1.0
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global state
 active_alerts = []
@@ -110,7 +112,7 @@ def compute_duress_score(features: dict, baseline: dict) -> float:
 async def saaras_stt(audio_chunk: bytes) -> str:
     # Saaras STT API
     url = "https://api.sarvam.ai/speech-to-text"
-    headers = {"api-subscription-key": SARVAM_API_KEY}
+    headers = {"api-subscription-key": settings.SARVAM_API_KEY}
     
     # Save audio_chunk to a temporary file in memory as wav
     # Assuming audio_chunk is raw PCM 16kHz, we need to wrap it in WAV
@@ -146,7 +148,7 @@ async def sarvam_105b_chat(messages: list, system_prompt: str) -> str:
     url = "https://api.sarvam.ai/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "api-subscription-key": SARVAM_API_KEY
+        "api-subscription-key": settings.SARVAM_API_KEY
     }
     
     payload_messages = [{"role": "system", "content": system_prompt}] + messages
@@ -174,7 +176,7 @@ async def bulbul_tts(text: str) -> str:
     url = "https://api.sarvam.ai/text-to-speech"
     headers = {
         "Content-Type": "application/json",
-        "api-subscription-key": SARVAM_API_KEY
+        "api-subscription-key": settings.SARVAM_API_KEY
     }
     
     payload = {
@@ -226,7 +228,7 @@ async def acoustic_branch(audio_chunk: bytes, session: dict) -> dict:
 
     return {
         "is_live": is_live,
-        "is_duress": risk_score > DURESS_THRESHOLD,
+        "is_duress": risk_score > settings.DURESS_THRESHOLD,
         "risk_score": risk_score,
     }
 
@@ -246,13 +248,13 @@ def extract_amount(text: str) -> float:
     return None
 
 def route(transcript: str, signal: dict, amount: float, session: dict) -> str:
-    high_value = amount is not None and amount > AMOUNT_THRESHOLD
+    high_value = amount is not None and amount > settings.AMOUNT_THRESHOLD
 
     if not signal["is_live"]:
         session["stage"] = "soft_reject"
         return SOFT_REJECT_PROMPT
 
-    if signal["is_duress"] or (high_value and signal["risk_score"] > STEPUP_THRESHOLD):
+    if signal["is_duress"] or (high_value and signal["risk_score"] > settings.STEPUP_THRESHOLD):
         session["stage"] = "covert_protocol"
         session["risk_score"] = signal["risk_score"]
         fire_silent_alert(session)
@@ -348,12 +350,18 @@ async def alerts_stream():
 
 @app.get("/")
 def index():
-    return HTMLResponse(open("static/index.html", encoding="utf-8").read())
+    if os.path.exists("frontend/dist/index.html"):
+        return HTMLResponse(open("frontend/dist/index.html", encoding="utf-8").read())
+    return HTMLResponse("<h1>Frontend not built yet. Run npm run build in frontend directory.</h1>")
 
-@app.get("/dashboard")
-def dashboard():
-    return HTMLResponse(open("static/dashboard.html", encoding="utf-8").read())
+app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+
+@app.get("/{full_path:path}")
+def catch_all(full_path: str):
+    if os.path.exists("frontend/dist/index.html"):
+        return HTMLResponse(open("frontend/dist/index.html", encoding="utf-8").read())
+    return HTMLResponse("<h1>Frontend not built yet. Run npm run build in frontend directory.</h1>")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)

@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  voxguard:
+    build: .
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+    volumes:
+      - ./config.py:/app/config.py
+      - ./main.py:/app/main.py

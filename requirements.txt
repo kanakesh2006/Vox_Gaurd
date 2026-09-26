@@ -8,3 +8,5 @@ praat-parselmouth
 numpy
 soundfile
 jinja2
+pydantic-settings
+pytest
